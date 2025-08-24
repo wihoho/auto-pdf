@@ -7,6 +7,8 @@ import 'package:auto_pdf_converter/services/file_watcher_service.dart';
 import 'package:auto_pdf_converter/services/conversion_service.dart';
 import 'package:auto_pdf_converter/services/logging_service.dart';
 
+// No need for test subclass since we made isPowerPointFile static
+
 void main() {
   group('Auto PDF Converter App Tests', () {
     testWidgets('App starts and displays main UI elements', (WidgetTester tester) async {
@@ -170,6 +172,25 @@ void main() {
 
     test('Service can be instantiated', () {
       expect(fileWatcherService, isNotNull);
+    });
+
+    test('PowerPoint file detection works correctly', () {
+      // Test the static file detection method
+
+      // Test supported PowerPoint formats
+      expect(FileWatcherService.isPowerPointFile('presentation.ppt'), true);
+      expect(FileWatcherService.isPowerPointFile('presentation.pptx'), true);
+      expect(FileWatcherService.isPowerPointFile('presentation.pptm'), true);
+      expect(FileWatcherService.isPowerPointFile('PRESENTATION.PPT'), true);
+      expect(FileWatcherService.isPowerPointFile('PRESENTATION.PPTX'), true);
+      expect(FileWatcherService.isPowerPointFile('PRESENTATION.PPTM'), true);
+
+      // Test unsupported formats
+      expect(FileWatcherService.isPowerPointFile('document.pdf'), false);
+      expect(FileWatcherService.isPowerPointFile('document.docx'), false);
+      expect(FileWatcherService.isPowerPointFile('document.txt'), false);
+      expect(FileWatcherService.isPowerPointFile('presentation'), false);
+      expect(FileWatcherService.isPowerPointFile('presentation.'), false);
     });
   });
 

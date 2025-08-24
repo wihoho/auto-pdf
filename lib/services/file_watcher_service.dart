@@ -189,9 +189,14 @@ class FileWatcherService {
   }
   
   /// Checks if a file is a PowerPoint file based on extension
-  bool _isPowerPointFile(String fileName) {
+  static bool isPowerPointFile(String fileName) {
     final extension = path.extension(fileName).toLowerCase();
-    return extension == '.ppt' || extension == '.pptx';
+    return extension == '.ppt' || extension == '.pptx' || extension == '.pptm';
+  }
+
+  /// Private wrapper for the static method
+  bool _isPowerPointFile(String fileName) {
+    return isPowerPointFile(fileName);
   }
   
   /// Manually processes all existing PowerPoint files in the watched directory

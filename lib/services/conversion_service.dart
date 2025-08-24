@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:path/path.dart' as path;
 import 'package:logging/logging.dart';
 
@@ -153,7 +152,7 @@ try {
     }
 
     \$inputFile = Get-Item "$escapedInputPath"
-    Write-Host "  ✓ Input file exists"
+    Write-Host "  [OK] Input file exists"
     Write-Host "  - Full path: \$(\$inputFile.FullName)"
     Write-Host "  - Size: \$(\$inputFile.Length) bytes"
     Write-Host "  - Last modified: \$(\$inputFile.LastWriteTime)"
@@ -166,7 +165,7 @@ try {
     if (-not (Test-Path \$outputDir)) {
         throw "Output directory does not exist: \$outputDir"
     }
-    Write-Host "  ✓ Output directory exists: \$outputDir"
+    Write-Host "  [OK] Output directory exists: \$outputDir"
 
     # Step 3: Test PowerPoint COM availability
     Write-Host ""
@@ -175,7 +174,7 @@ try {
         \$testPpt = New-Object -ComObject PowerPoint.Application
         \$testPpt.Quit()
         [System.Runtime.Interopservices.Marshal]::ReleaseComObject(\$testPpt) | Out-Null
-        Write-Host "  ✓ PowerPoint COM object accessible"
+        Write-Host "  [OK] PowerPoint COM object accessible"
     } catch {
         throw "PowerPoint COM object not available: \$(\$_.Exception.Message)"
     }
@@ -184,19 +183,16 @@ try {
     Write-Host ""
     Write-Host "STEP 4: Creating PowerPoint application..."
     \$powerpoint = New-Object -ComObject PowerPoint.Application
-    Write-Host "  ✓ PowerPoint application created"
+    Write-Host "  [OK] PowerPoint application created"
     Write-Host "  - Version: \$(\$powerpoint.Version)"
     Write-Host "  - Build: \$(\$powerpoint.Build)"
-
-    \$powerpoint.Visible = \$false
-    Write-Host "  ✓ PowerPoint set to invisible mode"
 
     # Step 5: Open presentation
     Write-Host ""
     Write-Host "STEP 5: Opening presentation..."
     Write-Host "  - Opening file: $escapedInputPath"
-    \$presentation = \$powerpoint.Presentations.Open("$escapedInputPath", \$true, \$true, \$false)
-    Write-Host "  ✓ Presentation opened successfully"
+    \$presentation = \$powerpoint.Presentations.Open("$escapedInputPath", -1, -1, 0)  # msoTrue = -1, msoFalse = 0
+    Write-Host "  [OK] Presentation opened successfully"
     Write-Host "  - Slide count: \$(\$presentation.Slides.Count)"
     Write-Host "  - Name: \$(\$presentation.Name)"
 
@@ -211,19 +207,19 @@ try {
     \$presentation.SaveAs("$escapedOutputPath", \$ppSaveAsPDF)
     \$exportDuration = (Get-Date) - \$exportStart
 
-    Write-Host "  ✓ Export completed in \$(\$exportDuration.TotalSeconds) seconds"
+    Write-Host "  [OK] Export completed in \$(\$exportDuration.TotalSeconds) seconds"
 
     # Step 7: Close presentation
     Write-Host ""
     Write-Host "STEP 7: Closing presentation..."
     \$presentation.Close()
-    Write-Host "  ✓ Presentation closed"
+    Write-Host "  [OK] Presentation closed"
 
     # Step 8: Quit PowerPoint
     Write-Host ""
     Write-Host "STEP 8: Quitting PowerPoint..."
     \$powerpoint.Quit()
-    Write-Host "  ✓ PowerPoint quit successfully"
+    Write-Host "  [OK] PowerPoint quit successfully"
 
     # Step 9: Release COM objects
     Write-Host ""
@@ -232,14 +228,14 @@ try {
     [System.Runtime.Interopservices.Marshal]::ReleaseComObject(\$powerpoint) | Out-Null
     [System.GC]::Collect()
     [System.GC]::WaitForPendingFinalizers()
-    Write-Host "  ✓ COM objects released and garbage collected"
+    Write-Host "  [OK] COM objects released and garbage collected"
 
     # Step 10: Verify PDF creation
     Write-Host ""
     Write-Host "STEP 10: Verifying PDF creation..."
     if (Test-Path "$escapedOutputPath") {
         \$pdfFile = Get-Item "$escapedOutputPath"
-        Write-Host "  ✓ PDF file created successfully"
+        Write-Host "  [OK] PDF file created successfully"
         Write-Host "  - Path: \$(\$pdfFile.FullName)"
         Write-Host "  - Size: \$(\$pdfFile.Length) bytes"
         Write-Host "  - Created: \$(\$pdfFile.CreationTime)"
@@ -274,16 +270,16 @@ catch {
         if (\$presentation) {
             Write-Host "  - Closing presentation..."
             \$presentation.Close()
-            Write-Host "  ✓ Presentation closed"
+            Write-Host "  [OK] Presentation closed"
         }
         if (\$powerpoint) {
             Write-Host "  - Quitting PowerPoint..."
             \$powerpoint.Quit()
-            Write-Host "  ✓ PowerPoint quit"
+            Write-Host "  [OK] PowerPoint quit"
         }
         [System.Runtime.Interopservices.Marshal]::ReleaseComObject(\$presentation) | Out-Null
         [System.Runtime.Interopservices.Marshal]::ReleaseComObject(\$powerpoint) | Out-Null
-        Write-Host "  ✓ COM objects released"
+        Write-Host "  [OK] COM objects released"
     } catch {
         Write-Host "  ! Cleanup error: \$(\$_.Exception.Message)"
     }
@@ -312,7 +308,7 @@ catch {
 
       // Write script with detailed logging
       _logger.info('Writing PowerShell script to temp file...');
-      await scriptFile.writeAsString(script, encoding: utf8);
+      await scriptFile.writeAsString(script);
 
       // Verify script was written
       if (await scriptFile.exists()) {
