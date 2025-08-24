@@ -2,6 +2,8 @@
 
 A Windows desktop application built with Flutter that automatically converts PowerPoint files (.ppt and .pptx) to PDF format when they are added to a monitored folder.
 
+🌐 **Website**: [Visit our promotional website](https://auto-pdf-converter.vercel.app) for more information and downloads.
+
 ## Features
 
 - **Automatic Monitoring**: Watches a selected folder for new PowerPoint files
@@ -150,8 +152,31 @@ lib/
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## Website
+
+The promotional website for Auto PDF Converter is built with Next.js and deployed on Vercel. It features:
+
+- **SEO Optimized**: Dynamic meta tags, sitemap generation, and structured data
+- **Geotargeting**: Location-based content using Vercel Edge Middleware
+- **Performance**: Optimized for speed and Core Web Vitals
+- **Analytics**: Integrated with Vercel Analytics for insights
+- **Responsive**: Mobile-first design that works on all devices
+
+### Website Development
+
+The website source code is located in the `website/` folder. To work on the website:
+
+```bash
+cd website
+npm install
+npm run dev
+```
+
+For deployment instructions, see [website/DEPLOYMENT.md](website/DEPLOYMENT.md).
+
 ## Acknowledgments
 
 - Built with [Flutter](https://flutter.dev/) for cross-platform desktop development
 - Uses Microsoft PowerPoint COM automation for reliable PDF conversion
+- Website built with [Next.js](https://nextjs.org/) and deployed on [Vercel](https://vercel.com/)
 - Inspired by the need to automate repetitive document conversion tasks
