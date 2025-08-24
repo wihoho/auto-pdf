@@ -1,5 +1,5 @@
 name: auto_pdf_converter
-description: Automated PPT/PPTX to PDF Converter for Windows
+description: Automated PPT/PPTX to PDF Converter for Windows and macOS
 
 publish_to: 'none'
 
@@ -40,5 +40,8 @@ flutter:
 
 flutter_launcher_icons:
   windows:
+    generate: true
+    image_path: "assets/icons/icon.jpeg"
+  macos:
     generate: true
     image_path: "assets/icons/icon.jpeg"
