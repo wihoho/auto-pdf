@@ -4,12 +4,21 @@ A Windows desktop application built with Flutter that automatically converts Pow
 
 ## Features
 
+### Core Features
 - **Automatic Monitoring**: Watches a selected folder for new PowerPoint files
 - **Instant Conversion**: Automatically converts PPT/PPTX files to PDF using Microsoft PowerPoint
 - **User-Friendly Interface**: Simple and intuitive GUI with real-time status updates
 - **Activity Logging**: Comprehensive logging of all conversion activities and errors
 - **Background Operation**: Runs quietly in the background without interrupting your workflow
 - **Error Handling**: Robust error handling with detailed error messages
+
+### Premium Features (Subscription-based)
+- **User Authentication**: Secure sign-up and sign-in with Supabase Auth
+- **Subscription Management**: Monthly and yearly premium plans via Stripe
+- **Unlimited Conversions**: No daily or monthly limits for premium users
+- **Real-time Sync**: Subscription status updates instantly across devices
+- **Customer Portal**: Self-service subscription management
+- **Free Tier**: Limited conversions for non-subscribers with upgrade prompts
 
 ## Requirements
 
@@ -47,6 +56,27 @@ A Windows desktop application built with Flutter that automatically converts Pow
    ```bash
    flutter build windows --release
    ```
+
+## Subscription Setup
+
+To enable the premium subscription features, you'll need to configure Supabase and Stripe integration. See the detailed setup guide in [SUBSCRIPTION_SETUP.md](SUBSCRIPTION_SETUP.md).
+
+### Quick Setup Summary:
+
+1. **Supabase Configuration**:
+   - Create a Supabase project
+   - Update `lib/config/app_config.dart` with your Supabase URL and anon key
+   - Deploy the database schema and Edge Functions
+
+2. **Stripe Configuration**:
+   - Create Stripe products and prices
+   - Configure webhooks
+   - Set up API keys in Supabase secrets
+
+3. **Test the Integration**:
+   - Run the app and test authentication
+   - Test subscription flow with Stripe test cards
+   - Verify real-time subscription status updates
 
 ## Usage
 
