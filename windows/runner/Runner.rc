@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "auto_pdf_converter" "\0"
+            VALUE "CompanyName", "Auto PDF Converter" "\0"
+            VALUE "FileDescription", "Auto PDF Converter - Automated PowerPoint to PDF Conversion" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "auto_pdf_converter" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 Auto PDF Converter. All rights reserved." "\0"
             VALUE "OriginalFilename", "auto_pdf_converter.exe" "\0"
-            VALUE "ProductName", "auto_pdf_converter" "\0"
+            VALUE "ProductName", "Auto PDF Converter" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
