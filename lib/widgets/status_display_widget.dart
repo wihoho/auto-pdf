@@ -58,6 +58,17 @@ class StatusDisplayWidget extends StatelessWidget {
                   appState.hasSelectedFolder ? 'Selected' : 'None',
                   appState.hasSelectedFolder ? Colors.green : Colors.grey,
                 ),
+
+                // Conversion progress (only show during converting)
+                if (appState.isConverting && appState.conversionProgress.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _buildStatusRow(
+                    context,
+                    'Conversion Progress',
+                    appState.conversionProgress,
+                    Colors.orange,
+                  ),
+                ],
                 
                 // Error display
                 if (appState.lastError != null) ...[
@@ -152,6 +163,10 @@ class StatusDisplayWidget extends StatelessWidget {
 
   Widget _buildStatusIndicator(MonitoringStatus status) {
     switch (status) {
+      case MonitoringStatus.scanning:
+        return _buildAnimatedIndicator(Colors.blue, 'Scanning');
+      case MonitoringStatus.converting:
+        return _buildAnimatedIndicator(Colors.orange, 'Converting');
       case MonitoringStatus.monitoring:
         return _buildAnimatedIndicator(Colors.green, 'Monitoring');
       case MonitoringStatus.error:
@@ -228,6 +243,10 @@ class StatusDisplayWidget extends StatelessWidget {
 
   Color _getStatusColor(MonitoringStatus status) {
     switch (status) {
+      case MonitoringStatus.scanning:
+        return Colors.blue;
+      case MonitoringStatus.converting:
+        return Colors.orange;
       case MonitoringStatus.monitoring:
         return Colors.green;
       case MonitoringStatus.error:
@@ -240,6 +259,10 @@ class StatusDisplayWidget extends StatelessWidget {
 
   String _getStatusText(MonitoringStatus status) {
     switch (status) {
+      case MonitoringStatus.scanning:
+        return 'Scanning';
+      case MonitoringStatus.converting:
+        return 'Converting';
       case MonitoringStatus.monitoring:
         return 'Monitoring';
       case MonitoringStatus.error:

@@ -37,7 +37,10 @@ class MonitoringControlWidget extends StatelessWidget {
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: appState.hasSelectedFolder && !appState.isMonitoring
+                        onPressed: appState.hasSelectedFolder &&
+                                   !appState.isMonitoring &&
+                                   !appState.isScanning &&
+                                   !appState.isConverting
                             ? () => _startMonitoring(context)
                             : null,
                         icon: const Icon(Icons.play_arrow),
@@ -73,7 +76,10 @@ class MonitoringControlWidget extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: appState.hasSelectedFolder && !appState.isMonitoring
+                    onPressed: appState.hasSelectedFolder &&
+                               !appState.isMonitoring &&
+                               !appState.isScanning &&
+                               !appState.isConverting
                         ? () => _processExistingFiles(context)
                         : null,
                     icon: const Icon(Icons.refresh),
@@ -83,14 +89,12 @@ class MonitoringControlWidget extends StatelessWidget {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 8),
-                
+
                 // Help text
                 Text(
-                  appState.hasSelectedFolder
-                      ? 'Click "Start Monitoring" to begin watching for new PowerPoint files.'
-                      : 'Please select a folder first.',
+                  _getHelpText(appState),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.grey.shade600,
                   ),
@@ -200,5 +204,25 @@ class MonitoringControlWidget extends StatelessWidget {
         duration: const Duration(seconds: 3),
       ),
     );
+  }
+
+  String _getHelpText(AppStateProvider appState) {
+    if (!appState.hasSelectedFolder) {
+      return 'Please select a folder first.';
+    }
+
+    switch (appState.status) {
+      case MonitoringStatus.scanning:
+        return 'Scanning folder for existing PowerPoint files...';
+      case MonitoringStatus.converting:
+        return 'Converting existing PowerPoint files to PDF...';
+      case MonitoringStatus.monitoring:
+        return 'Currently monitoring for new PowerPoint files.';
+      case MonitoringStatus.error:
+        return 'An error occurred. Check the logs for details.';
+      case MonitoringStatus.idle:
+      default:
+        return 'Folder selected. Monitoring will start automatically after initial scan.';
+    }
   }
 }
