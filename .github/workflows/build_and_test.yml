@@ -1,0 +1,70 @@
+# .github/workflows/build_and_test.yml
+
+# Name for the workflow, which will be displayed in the GitHub Actions tab
+name: Build & Test Flutter Windows App
+
+# 1. DEFINE TRIGGERS
+# This workflow runs on pushes to the 'main' branch and on any PR targeting 'main'
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # Define a single job named 'build-and-test'
+  build-and-test:
+    # 2. SELECT THE RUNNER
+    # This is critical. The job must run on a Windows machine to build a Windows app.
+    runs-on: windows-latest
+
+    steps:
+      # 3. CHECKOUT THE CODE
+      # This step checks out a copy of your repository onto the runner.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 4. SET UP FLUTTER SDK
+      # This community action installs a specific version of the Flutter SDK.
+      # It caches the SDK for faster subsequent runs.
+      - name: Set up Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          # Use the flutter version from your pubspec.yaml for consistency
+          flutter-version-file: 'pubspec.yaml'
+          cache: true
+
+      # 5. GET DEPENDENCIES
+      # Runs 'flutter pub get' to download all the project dependencies.
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      # 6. RUN CODE ANALYSIS (PR CHECK)
+      # Checks for any static analysis issues, warnings, or lints.
+      # The --fatal-infos flag ensures the step fails if any info-level issues are found.
+      - name: Run static code analysis
+        run: flutter analyze --fatal-infos
+
+      # 7. RUN TESTS (PR CHECK)
+      # Runs all the unit and widget tests in your project.
+      - name: Run unit and widget tests
+        run: flutter test
+
+      # 8. BUILD THE WINDOWS EXECUTABLE
+      # This step compiles the release version of the Windows application.
+      # It will only run on pushes to the 'main' branch, not on PRs, for efficiency.
+      - name: Build Windows release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: flutter build windows --release
+
+      # 9. UPLOAD THE BUILD ARTIFACT
+      # This step packages the output from the build folder and uploads it.
+      # This allows easy download of the built application for manual testing.
+      - name: Upload Windows build artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build-${{ github.sha }}
+          # The path points to the folder containing the .exe and required .dll files
+          path: build/windows/runner/Release/
