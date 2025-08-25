@@ -1,11 +1,13 @@
 # Auto PDF Converter
 
-A Windows desktop application built with Flutter that automatically converts PowerPoint files (.ppt and .pptx) to PDF format when they are added to a monitored folder.
+A cross-platform desktop application built with Flutter that automatically converts PowerPoint files (.ppt and .pptx) to PDF format when they are added to a monitored folder. Supports both Windows and macOS.
 
 ## Features
 
+- **Cross-Platform Support**: Works on both Windows and macOS
 - **Automatic Monitoring**: Watches a selected folder for new PowerPoint files
 - **Instant Conversion**: Automatically converts PPT/PPTX files to PDF using Microsoft PowerPoint
+- **Platform-Specific Automation**: Uses PowerShell on Windows and AppleScript on macOS
 - **User-Friendly Interface**: Simple and intuitive GUI with real-time status updates
 - **Activity Logging**: Comprehensive logging of all conversion activities and errors
 - **Background Operation**: Runs quietly in the background without interrupting your workflow
@@ -13,17 +15,33 @@ A Windows desktop application built with Flutter that automatically converts Pow
 
 ## Requirements
 
-- **Windows Operating System**: Windows 10 or later
+### Windows
+- **Operating System**: Windows 10 or later
 - **Microsoft PowerPoint**: Must be installed on the system for conversion functionality
+- **PowerShell**: Used for automation (included with Windows)
+
+### macOS
+- **Operating System**: macOS 10.14 (Mojave) or later
+- **Microsoft PowerPoint for Mac**: Must be installed on the system for conversion functionality
+- **AppleScript**: Used for automation (included with macOS)
+
+### Development
 - **Flutter SDK**: Required for development (not needed for end users)
 
 ## Installation
 
 ### For End Users
 
-1. Download the latest release from the releases page
+#### Windows
+1. Download the latest Windows release from the releases page
 2. Extract the ZIP file to your desired location
 3. Run `auto_pdf_converter.exe`
+
+#### macOS
+1. Download the latest macOS release from the releases page
+2. Extract the ZIP file to your desired location
+3. Run `Auto PDF Converter.app`
+4. If you see a security warning, go to System Preferences > Security & Privacy and click "Open Anyway"
 
 ### For Developers
 
@@ -40,12 +58,20 @@ A Windows desktop application built with Flutter that automatically converts Pow
 
 3. Run the application:
    ```bash
+   # For Windows
    flutter run -d windows
+
+   # For macOS
+   flutter run -d macos
    ```
 
 4. Build for release:
    ```bash
+   # For Windows
    flutter build windows --release
+
+   # For macOS
+   flutter build macos --release
    ```
 
 ## Usage
@@ -69,29 +95,48 @@ A Windows desktop application built with Flutter that automatically converts Pow
 The application uses the following technologies and approaches:
 
 - **File System Watcher**: Monitors the selected directory for file system changes
-- **PowerShell Automation**: Uses PowerShell scripts to automate Microsoft PowerPoint for conversion
-- **COM Automation**: Leverages PowerPoint's COM interface for reliable PDF generation
-- **Flutter Desktop**: Provides a modern, responsive user interface
+- **Platform-Specific Automation**:
+  - **Windows**: Uses PowerShell scripts with COM automation to control Microsoft PowerPoint
+  - **macOS**: Uses AppleScript to automate Microsoft PowerPoint for Mac
+- **Cross-Platform UI**: Flutter Desktop provides a modern, responsive user interface on both platforms
 
 ## Conversion Process
 
 When a new PowerPoint file is detected:
 
 1. The file watcher triggers a conversion event
-2. A PowerShell script is generated with the file paths
+2. Platform-specific automation is initiated:
+   - **Windows**: A PowerShell script is generated and executed
+   - **macOS**: An AppleScript command is generated and executed
 3. PowerPoint is launched in the background (invisible mode)
 4. The presentation is opened and exported as PDF
-5. PowerPoint is properly closed and COM objects are released
+5. PowerPoint is properly closed and resources are released
 6. The PDF file is saved in the same directory as the original
 
 ## Troubleshooting
 
 ### Common Issues
 
+#### Windows
 **"Microsoft PowerPoint may not be installed"**
 - Ensure Microsoft PowerPoint is installed and properly licensed
 - Try opening PowerPoint manually to verify it works
+- Check that PowerShell execution policy allows script execution
 
+**"PowerShell execution failed"**
+- Ensure PowerShell is available and not restricted by group policy
+- Try running PowerShell as administrator
+
+#### macOS
+**"Microsoft PowerPoint may not be installed"**
+- Ensure Microsoft PowerPoint for Mac is installed and properly licensed
+- Try opening PowerPoint manually to verify it works
+
+**"AppleScript execution failed"**
+- Grant the app permission to control PowerPoint in System Preferences > Security & Privacy > Privacy > Automation
+- Ensure PowerPoint is not running in the background
+
+#### General
 **"Failed to convert" errors**
 - Check that the PowerPoint file is not corrupted
 - Ensure the file is not currently open in another application
@@ -118,9 +163,13 @@ lib/
 ├── providers/
 │   └── app_state_provider.dart    # State management
 ├── services/
-│   ├── conversion_service.dart    # PowerPoint to PDF conversion
-│   ├── file_watcher_service.dart  # File system monitoring
-│   └── logging_service.dart       # Logging functionality
+│   ├── conversion_service.dart           # Main conversion service (platform-agnostic)
+│   ├── conversion_service_interface.dart # Conversion service interface
+│   ├── conversion_service_factory.dart   # Platform-specific service factory
+│   ├── conversion_service_windows.dart   # Windows PowerShell implementation
+│   ├── conversion_service_macos.dart     # macOS AppleScript implementation
+│   ├── file_watcher_service.dart         # File system monitoring
+│   └── logging_service.dart              # Logging functionality
 ├── screens/
 │   └── main_screen.dart           # Main application screen
 └── widgets/
@@ -128,6 +177,14 @@ lib/
     ├── monitoring_control_widget.dart  # Start/stop controls
     ├── status_display_widget.dart      # Status information
     └── log_display_widget.dart         # Activity log display
+
+macos/                        # macOS platform files
+├── Runner/
+│   ├── Info.plist           # macOS app configuration
+│   ├── DebugProfile.entitlements  # Development entitlements
+│   └── Release.entitlements       # Release entitlements
+
+windows/                      # Windows platform files (existing)
 ```
 
 ### Key Dependencies
@@ -153,5 +210,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 - Built with [Flutter](https://flutter.dev/) for cross-platform desktop development
-- Uses Microsoft PowerPoint COM automation for reliable PDF conversion
+- Uses Microsoft PowerPoint automation for reliable PDF conversion:
+  - Windows: COM automation via PowerShell
+  - macOS: AppleScript automation
 - Inspired by the need to automate repetitive document conversion tasks
