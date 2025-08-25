@@ -5,7 +5,7 @@ import 'package:logging/logging.dart';
 class ConversionService {
   final Logger _logger = Logger('ConversionService');
   
-  /// Converts a PowerPoint file to PDF using PowerShell automation
+  /// Converts a PowerPoint file to PDF using platform-specific automation
   Future<bool> convertPptToPdf(String pptFilePath) async {
     final startTime = DateTime.now();
     _logger.info('=== CONVERSION START ===');
@@ -65,14 +65,9 @@ class ConversionService {
         return false;
       }
 
-      // Create PowerShell script for conversion
-      _logger.info('Step 5: Creating PowerShell script...');
-      final powershellScript = _createPowerShellScript(pptFilePath, pdfPath);
-      _logger.info('PowerShell script created (${powershellScript.length} characters)');
-
-      // Execute PowerShell script
-      _logger.info('Step 6: Executing PowerShell script...');
-      final result = await _executePowerShellScript(powershellScript);
+      // Execute platform-specific conversion
+      _logger.info('Step 5: Executing platform-specific conversion...');
+      final result = await _executeConversion(pptFilePath, pdfPath);
 
       _logger.info('Step 7: Verifying conversion result...');
       if (result) {
@@ -90,7 +85,7 @@ class ConversionService {
           return true;
         } else {
           _logger.severe('=== CONVERSION FAILED ===');
-          _logger.severe('PowerShell reported success but PDF file not found');
+          _logger.severe('Conversion reported success but PDF file not found');
           _logger.severe('Expected path: $pdfPath');
           _logger.severe('Directory contents:');
 
@@ -109,7 +104,7 @@ class ConversionService {
       } else {
         final duration = DateTime.now().difference(startTime);
         _logger.severe('=== CONVERSION FAILED ===');
-        _logger.severe('PowerShell script execution failed');
+        _logger.severe('Platform-specific conversion failed');
         _logger.severe('File: $pptFilePath');
         _logger.severe('Duration: ${duration.inMilliseconds}ms');
         _logger.severe('========================');
@@ -128,7 +123,35 @@ class ConversionService {
       return false;
     }
   }
-  
+
+  /// Executes platform-specific conversion
+  Future<bool> _executeConversion(String inputPath, String outputPath) async {
+    if (Platform.isWindows) {
+      return await _executeWindowsConversion(inputPath, outputPath);
+    } else if (Platform.isMacOS) {
+      return await _executeMacOSConversion(inputPath, outputPath);
+    } else {
+      _logger.severe('Unsupported platform: ${Platform.operatingSystem}');
+      return false;
+    }
+  }
+
+  /// Executes Windows-specific conversion using PowerShell
+  Future<bool> _executeWindowsConversion(String inputPath, String outputPath) async {
+    _logger.info('Using Windows PowerShell conversion method');
+    final powershellScript = _createPowerShellScript(inputPath, outputPath);
+    _logger.info('PowerShell script created (${powershellScript.length} characters)');
+    return await _executePowerShellScript(powershellScript);
+  }
+
+  /// Executes macOS-specific conversion using AppleScript
+  Future<bool> _executeMacOSConversion(String inputPath, String outputPath) async {
+    _logger.info('Using macOS AppleScript conversion method');
+    final appleScript = _createAppleScript(inputPath, outputPath);
+    _logger.info('AppleScript created (${appleScript.length} characters)');
+    return await _executeAppleScript(appleScript);
+  }
+
   /// Creates a PowerShell script for PPT to PDF conversion
   String _createPowerShellScript(String inputPath, String outputPath) {
     // Escape paths for PowerShell - use double quotes and escape internal quotes
@@ -411,9 +434,159 @@ catch {
       return false;
     }
   }
-  
+
+  /// Creates an AppleScript for PPT to PDF conversion on macOS
+  String _createAppleScript(String inputPath, String outputPath) {
+    return '''
+tell application "Microsoft PowerPoint"
+    activate
+    set inputFile to POSIX file "$inputPath"
+    set outputFile to POSIX file "$outputPath"
+
+    try
+        open inputFile
+        set activePresentation to active presentation
+        save activePresentation in outputFile as save as PDF
+        close activePresentation
+        return "SUCCESS"
+    on error errorMessage
+        return "ERROR: " & errorMessage
+    end try
+end tell
+''';
+  }
+
+  /// Executes an AppleScript and returns success status
+  Future<bool> _executeAppleScript(String script) async {
+    final executionStart = DateTime.now();
+    _logger.info('--- APPLESCRIPT EXECUTION START ---');
+
+    try {
+      // Create temporary script file
+      final tempDir = Directory.systemTemp;
+      final scriptFile = File(path.join(tempDir.path, 'ppt_conversion_${DateTime.now().millisecondsSinceEpoch}.scpt'));
+
+      _logger.info('AppleScript setup:');
+      _logger.info('  - Temp directory: ${tempDir.path}');
+      _logger.info('  - Script file: ${scriptFile.path}');
+      _logger.info('  - Script length: ${script.length} characters');
+
+      // Write script with detailed logging
+      _logger.info('Writing AppleScript to temp file...');
+      await scriptFile.writeAsString(script);
+
+      // Verify script was written
+      if (await scriptFile.exists()) {
+        final scriptStats = await scriptFile.stat();
+        _logger.info('Script file written successfully:');
+        _logger.info('  - File size: ${scriptStats.size} bytes');
+      } else {
+        _logger.severe('FAILED to write script file');
+        return false;
+      }
+
+      try {
+        _logger.info('Launching osascript process...');
+        final processArgs = [scriptFile.path];
+
+        _logger.info('osascript command:');
+        _logger.info('  - Executable: osascript');
+        _logger.info('  - Arguments: ${processArgs.join(' ')}');
+
+        final processStart = DateTime.now();
+
+        // Execute AppleScript with detailed logging
+        final result = await Process.run(
+          'osascript',
+          processArgs,
+          runInShell: true,
+        );
+
+        final processDuration = DateTime.now().difference(processStart);
+
+        _logger.info('osascript process completed:');
+        _logger.info('  - Duration: ${processDuration.inMilliseconds}ms');
+        _logger.info('  - Exit code: ${result.exitCode}');
+
+        // Log stdout with line numbers for easier debugging
+        if (result.stdout.isNotEmpty) {
+          _logger.info('AppleScript STDOUT:');
+          final stdoutLines = result.stdout.toString().split('\n');
+          for (int i = 0; i < stdoutLines.length; i++) {
+            if (stdoutLines[i].trim().isNotEmpty) {
+              _logger.info('  ${(i + 1).toString().padLeft(3)}: ${stdoutLines[i]}');
+            }
+          }
+        } else {
+          _logger.warning('AppleScript STDOUT: (empty)');
+        }
+
+        // Log stderr with line numbers for easier debugging
+        if (result.stderr.isNotEmpty) {
+          _logger.severe('AppleScript STDERR:');
+          final stderrLines = result.stderr.toString().split('\n');
+          for (int i = 0; i < stderrLines.length; i++) {
+            if (stderrLines[i].trim().isNotEmpty) {
+              _logger.severe('  ${(i + 1).toString().padLeft(3)}: ${stderrLines[i]}');
+            }
+          }
+        } else {
+          _logger.info('AppleScript STDERR: (empty)');
+        }
+
+        final success = result.exitCode == 0 && !result.stdout.toString().contains('ERROR:');
+        final totalDuration = DateTime.now().difference(executionStart);
+
+        if (success) {
+          _logger.info('--- APPLESCRIPT EXECUTION SUCCESS ---');
+          _logger.info('Total duration: ${totalDuration.inMilliseconds}ms');
+        } else {
+          _logger.severe('--- APPLESCRIPT EXECUTION FAILED ---');
+          _logger.severe('Exit code: ${result.exitCode}');
+          _logger.severe('Total duration: ${totalDuration.inMilliseconds}ms');
+        }
+
+        return success;
+
+      } finally {
+        // Clean up temporary script file
+        _logger.info('Cleaning up temporary script file...');
+        try {
+          if (await scriptFile.exists()) {
+            await scriptFile.delete();
+            _logger.info('Temporary script file deleted successfully');
+          } else {
+            _logger.warning('Temporary script file already gone');
+          }
+        } catch (e) {
+          _logger.warning('Failed to delete temporary script file: $e');
+        }
+      }
+
+    } catch (e, stackTrace) {
+      final totalDuration = DateTime.now().difference(executionStart);
+      _logger.severe('--- APPLESCRIPT EXECUTION ERROR ---');
+      _logger.severe('Duration: ${totalDuration.inMilliseconds}ms');
+      _logger.severe('Error: $e');
+      _logger.severe('Stack trace: $stackTrace');
+      return false;
+    }
+  }
+
   /// Checks if Microsoft PowerPoint is installed on the system
   Future<bool> isPowerPointInstalled() async {
+    if (Platform.isWindows) {
+      return await _isPowerPointInstalledWindows();
+    } else if (Platform.isMacOS) {
+      return await _isPowerPointInstalledMacOS();
+    } else {
+      _logger.warning('PowerPoint installation check not supported on ${Platform.operatingSystem}');
+      return false;
+    }
+  }
+
+  /// Checks if PowerPoint is installed on Windows
+  Future<bool> _isPowerPointInstalledWindows() async {
     try {
       final result = await Process.run(
         'powershell.exe',
@@ -423,10 +596,29 @@ catch {
         ],
         runInShell: true,
       );
-      
+
       return result.exitCode == 0 && result.stdout.toString().contains('PowerPoint');
     } catch (e) {
-      _logger.warning('Error checking PowerPoint installation: $e');
+      _logger.warning('Error checking PowerPoint installation on Windows: $e');
+      return false;
+    }
+  }
+
+  /// Checks if PowerPoint is installed on macOS
+  Future<bool> _isPowerPointInstalledMacOS() async {
+    try {
+      final result = await Process.run(
+        'osascript',
+        [
+          '-e',
+          'tell application "System Events" to return exists application process "Microsoft PowerPoint" or exists application "Microsoft PowerPoint"'
+        ],
+        runInShell: true,
+      );
+
+      return result.exitCode == 0 && result.stdout.toString().trim() == 'true';
+    } catch (e) {
+      _logger.warning('Error checking PowerPoint installation on macOS: $e');
       return false;
     }
   }
