@@ -42,18 +42,35 @@ class _MainScreenSimpleState extends State<MainScreenSimple> {
 
   void _setupFileWatcherCallbacks() {
     final appState = Provider.of<AppStateProvider>(context, listen: false);
-    
+
     _fileWatcherService.onFileConverted = (filePath) {
       appState.incrementConvertedFiles();
       appState.addLog('Successfully converted: ${_getFileName(filePath)}');
     };
-    
+
     _fileWatcherService.onConversionError = (error) {
       appState.setError(error);
     };
-    
+
     _fileWatcherService.onLog = (message) {
       appState.addLog(message);
+    };
+
+    // New callbacks for backfill process
+    _fileWatcherService.onScanningStarted = () {
+      appState.setStatus(MonitoringStatus.scanning);
+    };
+
+    _fileWatcherService.onConvertingStarted = () {
+      appState.setStatus(MonitoringStatus.converting);
+    };
+
+    _fileWatcherService.onProgressUpdate = (total, current) {
+      appState.setConversionProgress(total, current);
+    };
+
+    _fileWatcherService.onConvertingCompleted = () {
+      appState.resetConversionProgress();
     };
   }
 
@@ -342,6 +359,9 @@ class _MainScreenSimpleState extends State<MainScreenSimple> {
       if (selectedDirectory != null) {
         appState.setSelectedFolder(selectedDirectory);
         appState.addLog('Selected folder: $selectedDirectory');
+
+        // Immediately start scanning for existing files
+        await _scanAndConvertExistingFiles(appState, selectedDirectory);
       }
     } catch (e) {
       if (mounted) {
@@ -355,15 +375,32 @@ class _MainScreenSimpleState extends State<MainScreenSimple> {
     }
   }
 
+  Future<void> _scanAndConvertExistingFiles(AppStateProvider appState, String directoryPath) async {
+    try {
+      appState.resetConversionProgress();
+
+      // Perform the scan and conversion
+      await _fileWatcherService.scanAndConvertExistingFiles(directoryPath);
+
+      appState.addLog('Initial scan and conversion complete');
+
+      // After backfill is complete, start normal monitoring
+      await _startMonitoring(appState);
+
+    } catch (e) {
+      appState.setError('Error during initial scan: $e');
+    }
+  }
+
   Future<void> _startMonitoring(AppStateProvider appState) async {
     if (appState.selectedFolderPath == null) return;
-    
+
     try {
       appState.setStatus(MonitoringStatus.monitoring);
       appState.addLog('Starting monitoring...');
-      
+
       final success = await _fileWatcherService.startWatching(appState.selectedFolderPath!);
-      
+
       if (success) {
         appState.addLog('Monitoring started successfully');
         if (mounted) {
