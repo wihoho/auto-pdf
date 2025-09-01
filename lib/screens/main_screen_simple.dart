@@ -4,6 +4,9 @@ import 'package:file_picker/file_picker.dart';
 import '../providers/app_state_provider.dart';
 import '../services/file_watcher_service.dart';
 import '../services/logging_service.dart';
+import '../services/auth_service.dart';
+import 'account/account_screen.dart';
+import 'subscription/paywall_screen.dart';
 
 class MainScreenSimple extends StatefulWidget {
   const MainScreenSimple({super.key});
@@ -81,6 +84,111 @@ class _MainScreenSimpleState extends State<MainScreenSimple> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         elevation: 2,
+        actions: [
+          // Subscription status indicator
+          Consumer<AppStateProvider>(
+            builder: (context, appState, child) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: appState.hasActiveSubscription
+                          ? Colors.amber.shade700
+                          : Colors.grey.shade600,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          appState.hasActiveSubscription
+                              ? Icons.workspace_premium
+                              : Icons.free_breakfast,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          appState.hasActiveSubscription ? 'Premium' : 'Free',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          // Account button
+          Consumer<AuthService>(
+            builder: (context, authService, child) {
+              return PopupMenuButton<String>(
+                icon: CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  child: Text(
+                    authService.userDisplayName.substring(0, 1).toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                onSelected: (value) {
+                  switch (value) {
+                    case 'account':
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const AccountScreen(),
+                        ),
+                      );
+                      break;
+                    case 'upgrade':
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const PaywallScreen(),
+                        ),
+                      );
+                      break;
+                  }
+                },
+                itemBuilder: (context) {
+                  final appState = Provider.of<AppStateProvider>(context, listen: false);
+                  return [
+                    PopupMenuItem<String>(
+                      value: 'account',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.account_circle),
+                          const SizedBox(width: 8),
+                          Text('Account (${authService.userDisplayName})'),
+                        ],
+                      ),
+                    ),
+                    if (!appState.hasActiveSubscription)
+                      const PopupMenuItem<String>(
+                        value: 'upgrade',
+                        child: Row(
+                          children: [
+                            Icon(Icons.upgrade, color: Colors.amber),
+                            SizedBox(width: 8),
+                            Text('Upgrade to Premium'),
+                          ],
+                        ),
+                      ),
+                  ];
+                },
+              );
+            },
+          ),
+        ],
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -357,13 +465,27 @@ class _MainScreenSimpleState extends State<MainScreenSimple> {
 
   Future<void> _startMonitoring(AppStateProvider appState) async {
     if (appState.selectedFolderPath == null) return;
-    
+
+    // Check subscription status for free tier users
+    if (appState.isFreeTier) {
+      final remainingConversions = appState.getRemainingFreeConversions();
+      if (remainingConversions <= 0) {
+        _showUpgradeDialog();
+        return;
+      }
+
+      // Show warning if approaching limit
+      if (remainingConversions <= 2) {
+        _showLimitWarning(remainingConversions);
+      }
+    }
+
     try {
       appState.setStatus(MonitoringStatus.monitoring);
       appState.addLog('Starting monitoring...');
-      
+
       final success = await _fileWatcherService.startWatching(appState.selectedFolderPath!);
-      
+
       if (success) {
         appState.addLog('Monitoring started successfully');
         if (mounted) {
@@ -422,5 +544,67 @@ class _MainScreenSimpleState extends State<MainScreenSimple> {
       default:
         return 'Idle';
     }
+  }
+
+  void _showUpgradeDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.workspace_premium, color: Colors.amber),
+            SizedBox(width: 8),
+            Text('Upgrade Required'),
+          ],
+        ),
+        content: const Text(
+          'You have reached your free conversion limit. Upgrade to Premium for unlimited conversions and advanced features.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const PaywallScreen(),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Upgrade Now'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLimitWarning(int remainingConversions) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Warning: Only $remainingConversions free conversions remaining. Consider upgrading to Premium.',
+        ),
+        backgroundColor: Colors.orange,
+        action: SnackBarAction(
+          label: 'Upgrade',
+          textColor: Colors.white,
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const PaywallScreen(),
+              ),
+            );
+          },
+        ),
+        duration: const Duration(seconds: 5),
+      ),
+    );
   }
 }
