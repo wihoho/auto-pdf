@@ -40,7 +40,14 @@ class FileWatcherService {
       final isPowerPointAvailable = await _conversionService.isPowerPointInstalled();
       if (!isPowerPointAvailable) {
         _logger.warning('Microsoft PowerPoint may not be installed or accessible');
-        onLog?.call('WARNING: Microsoft PowerPoint may not be installed. Conversion may fail.');
+        onLog?.call('WARNING: Microsoft PowerPoint may not be installed. PowerPoint conversion may fail.');
+      }
+      
+      // Check if Word is installed
+      final isWordAvailable = await _conversionService.isWordInstalled();
+      if (!isWordAvailable) {
+        _logger.warning('Microsoft Word may not be installed or accessible');
+        onLog?.call('WARNING: Microsoft Word may not be installed. Word document conversion may fail.');
       }
       
       _logger.info('Starting to watch directory: $directoryPath');
@@ -104,13 +111,14 @@ class FileWatcherService {
         return;
       }
       
-      // Check if it's a PowerPoint file
-      if (!_isPowerPointFile(fileName)) {
+      // Check if it's a PowerPoint or Word file
+      if (!_isPowerPointFile(fileName) && !_isWordFile(fileName)) {
         return;
       }
       
-      _logger.info('New PowerPoint file detected: $fileName');
-      onLog?.call('New PowerPoint file detected: $fileName');
+      final fileType = _isPowerPointFile(fileName) ? 'PowerPoint' : 'Word document';
+      _logger.info('New $fileType file detected: $fileName');
+      onLog?.call('New $fileType file detected: $fileName');
       
       // Process the file with a slight delay to ensure it's fully written
       Timer(const Duration(seconds: 2), () {
@@ -141,8 +149,10 @@ class FileWatcherService {
       _logger.info('Starting conversion of: $fileName');
       onLog?.call('Converting: $fileName');
       
-      // Attempt conversion
-      final success = await _conversionService.convertPptToPdf(filePath);
+      // Attempt conversion based on file type
+      final success = _isPowerPointFile(fileName) 
+        ? await _conversionService.convertPptToPdf(filePath)
+        : await _conversionService.convertDocToPdf(filePath);
       
       if (success) {
         _logger.info('Successfully converted: $fileName');
@@ -194,9 +204,20 @@ class FileWatcherService {
     return extension == '.ppt' || extension == '.pptx' || extension == '.pptm';
   }
 
+  /// Checks if a file is a Word document based on extension
+  static bool isWordFile(String fileName) {
+    final extension = path.extension(fileName).toLowerCase();
+    return extension == '.doc' || extension == '.docx' || extension == '.docm';
+  }
+
   /// Private wrapper for the static method
   bool _isPowerPointFile(String fileName) {
     return isPowerPointFile(fileName);
+  }
+  
+  /// Private wrapper for the static method
+  bool _isWordFile(String fileName) {
+    return isWordFile(fileName);
   }
   
   /// Manually processes all existing PowerPoint files in the watched directory
@@ -208,7 +229,7 @@ class FileWatcherService {
       final files = await directory.list().toList();
       
       for (final entity in files) {
-        if (entity is File && _isPowerPointFile(entity.path)) {
+        if (entity is File && (_isPowerPointFile(entity.path) || _isWordFile(entity.path))) {
           final fileName = path.basename(entity.path);
           _logger.info('Processing existing file: $fileName');
           onLog?.call('Processing existing file: $fileName');

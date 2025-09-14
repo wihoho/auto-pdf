@@ -291,7 +291,170 @@ catch {
 ''';
   }
   
-  /// Executes a PowerShell script and returns success status
+  /// Creates a PowerShell script for Word to PDF conversion
+  String _createWordPowerShellScript(String inputPath, String outputPath) {
+    // Escape paths for PowerShell - use double quotes and escape internal quotes
+    final escapedInputPath = inputPath.replaceAll('"', '""');
+    final escapedOutputPath = outputPath.replaceAll('"', '""');
+
+    return '''
+# ===== Word to PDF Conversion Script =====
+Write-Host "=== CONVERSION SCRIPT START ==="
+Write-Host "Timestamp: \$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+Write-Host "PowerShell Version: \$(\$PSVersionTable.PSVersion)"
+Write-Host "Input File: $escapedInputPath"
+Write-Host "Output File: $escapedOutputPath"
+Write-Host ""
+
+try {
+    # Step 1: Validate input file
+    Write-Host "STEP 1: Validating input file..."
+    if (-not (Test-Path "$escapedInputPath")) {
+        throw "Input file does not exist: $escapedInputPath"
+    }
+
+    \$inputFile = Get-Item "$escapedInputPath"
+    Write-Host "  [OK] Input file exists"
+    Write-Host "  - Full path: \$(\$inputFile.FullName)"
+    Write-Host "  - Size: \$(\$inputFile.Length) bytes"
+    Write-Host "  - Last modified: \$(\$inputFile.LastWriteTime)"
+    Write-Host "  - Extension: \$(\$inputFile.Extension)"
+
+    # Step 2: Check output directory
+    Write-Host ""
+    Write-Host "STEP 2: Checking output directory..."
+    \$outputDir = Split-Path "$escapedOutputPath" -Parent
+    if (-not (Test-Path \$outputDir)) {
+        throw "Output directory does not exist: \$outputDir"
+    }
+    Write-Host "  [OK] Output directory exists: \$outputDir"
+
+    # Step 3: Test Word COM availability
+    Write-Host ""
+    Write-Host "STEP 3: Testing Word COM availability..."
+    try {
+        \$testWord = New-Object -ComObject Word.Application
+        \$testWord.Quit()
+        [System.Runtime.Interopservices.Marshal]::ReleaseComObject(\$testWord) | Out-Null
+        Write-Host "  [OK] Word COM object accessible"
+    } catch {
+        throw "Word COM object not available: \$(\$_.Exception.Message)"
+    }
+
+    # Step 4: Create Word application
+    Write-Host ""
+    Write-Host "STEP 4: Creating Word application..."
+    \$word = New-Object -ComObject Word.Application
+    Write-Host "  [OK] Word application created"
+    Write-Host "  - Version: \$(\$word.Version)"
+    Write-Host "  - Build: \$(\$word.Build)"
+
+    # Step 5: Open document
+    Write-Host ""
+    Write-Host "STEP 5: Opening document..."
+    Write-Host "  - Opening file: $escapedInputPath"
+    \$document = \$word.Documents.Open("$escapedInputPath", \$false, \$true)  # ReadOnly = true, AddToRecentFiles = false
+    Write-Host "  [OK] Document opened successfully"
+    Write-Host "  - Page count: \$(\$document.ComputeStatistics(2))"  # wdStatisticPages = 2
+    Write-Host "  - Word count: \$(\$document.ComputeStatistics(0))"  # wdStatisticWords = 0
+    Write-Host "  - Name: \$(\$document.Name)"
+
+    # Step 6: Export as PDF
+    Write-Host ""
+    Write-Host "STEP 6: Exporting as PDF..."
+    Write-Host "  - Target path: $escapedOutputPath"
+    Write-Host "  - Using ExportAsFixedFormat method"
+
+    \$exportStart = Get-Date
+    \$wdExportFormatPDF = 17
+    \$wdExportOptimizeForPrint = 0
+    \$wdExportCreateBookmarks = 1
+    \$document.ExportAsFixedFormat("$escapedOutputPath", \$wdExportFormatPDF, \$false, \$wdExportOptimizeForPrint, \$wdExportCreateBookmarks)
+    \$exportDuration = (Get-Date) - \$exportStart
+
+    Write-Host "  [OK] Export completed in \$(\$exportDuration.TotalSeconds) seconds"
+
+    # Step 7: Close document
+    Write-Host ""
+    Write-Host "STEP 7: Closing document..."
+    \$document.Close()
+    Write-Host "  [OK] Document closed"
+
+    # Step 8: Quit Word
+    Write-Host ""
+    Write-Host "STEP 8: Quitting Word..."
+    \$word.Quit()
+    Write-Host "  [OK] Word quit successfully"
+
+    # Step 9: Release COM objects
+    Write-Host ""
+    Write-Host "STEP 9: Releasing COM objects..."
+    [System.Runtime.Interopservices.Marshal]::ReleaseComObject(\$document) | Out-Null
+    [System.Runtime.Interopservices.Marshal]::ReleaseComObject(\$word) | Out-Null
+    [System.GC]::Collect()
+    [System.GC]::WaitForPendingFinalizers()
+    Write-Host "  [OK] COM objects released and garbage collected"
+
+    # Step 10: Verify PDF creation
+    Write-Host ""
+    Write-Host "STEP 10: Verifying PDF creation..."
+    if (Test-Path "$escapedOutputPath") {
+        \$pdfFile = Get-Item "$escapedOutputPath"
+        Write-Host "  [OK] PDF file created successfully"
+        Write-Host "  - Path: \$(\$pdfFile.FullName)"
+        Write-Host "  - Size: \$(\$pdfFile.Length) bytes"
+        Write-Host "  - Created: \$(\$pdfFile.CreationTime)"
+
+        Write-Host ""
+        Write-Host "=== CONVERSION SUCCESS ==="
+        Write-Host "Completed at: \$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+        exit 0
+    } else {
+        throw "PDF file was not created at expected location: $escapedOutputPath"
+    }
+}
+catch {
+    Write-Host ""
+    Write-Host "=== CONVERSION FAILED ==="
+    Write-Host "Error occurred at: \$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+    Write-Host "Error Message: \$(\$_.Exception.Message)"
+    Write-Host "Error Type: \$(\$_.Exception.GetType().Name)"
+    Write-Host "Error Category: \$(\$_.CategoryInfo.Category)"
+
+    if (\$_.Exception.InnerException) {
+        Write-Host "Inner Exception: \$(\$_.Exception.InnerException.Message)"
+    }
+
+    Write-Host "Stack Trace:"
+    Write-Host \$_.ScriptStackTrace
+
+    # Cleanup in case of error
+    Write-Host ""
+    Write-Host "Performing cleanup..."
+    try {
+        if (\$document) {
+            Write-Host "  - Closing document..."
+            \$document.Close()
+            Write-Host "  [OK] Document closed"
+        }
+        if (\$word) {
+            Write-Host "  - Quitting Word..."
+            \$word.Quit()
+            Write-Host "  [OK] Word quit"
+        }
+        [System.Runtime.Interopservices.Marshal]::ReleaseComObject(\$document) | Out-Null
+        [System.Runtime.Interopservices.Marshal]::ReleaseComObject(\$word) | Out-Null
+        Write-Host "  [OK] COM objects released"
+    } catch {
+        Write-Host "  ! Cleanup error: \$(\$_.Exception.Message)"
+    }
+
+    Write-Host "==========================="
+    Write-Error "CONVERSION FAILED: \$(\$_.Exception.Message)"
+    exit 1
+}
+''';
+  }
   Future<bool> _executePowerShellScript(String script) async {
     final executionStart = DateTime.now();
     _logger.info('--- POWERSHELL EXECUTION START ---');
@@ -427,6 +590,149 @@ catch {
       return result.exitCode == 0 && result.stdout.toString().contains('PowerPoint');
     } catch (e) {
       _logger.warning('Error checking PowerPoint installation: $e');
+      return false;
+    }
+  }
+  
+  /// Checks if Microsoft Word is installed on the system
+  Future<bool> isWordInstalled() async {
+    try {
+      final result = await Process.run(
+        'powershell.exe',
+        [
+          '-Command',
+          'Get-ItemProperty "HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*" | Where-Object {\$_.DisplayName -like "*Microsoft*Word*"} | Select-Object DisplayName'
+        ],
+        runInShell: true,
+      );
+      
+      return result.exitCode == 0 && result.stdout.toString().contains('Word');
+    } catch (e) {
+      _logger.warning('Error checking Word installation: $e');
+      return false;
+    }
+  }
+  
+  /// Converts a Word document to PDF using PowerShell automation
+  Future<bool> convertDocToPdf(String docFilePath) async {
+    final startTime = DateTime.now();
+    _logger.info('=== DOC CONVERSION START ===');
+    _logger.info('Target file: $docFilePath');
+    _logger.info('Start time: $startTime');
+
+    try {
+      // Validate input file
+      _logger.info('Step 1: Validating input file...');
+      final inputFile = File(docFilePath);
+
+      if (!await inputFile.exists()) {
+        _logger.severe('VALIDATION FAILED: Input file does not exist: $docFilePath');
+        return false;
+      }
+
+      final fileStats = await inputFile.stat();
+      _logger.info('File validation SUCCESS:');
+      _logger.info('  - File size: ${fileStats.size} bytes');
+      _logger.info('  - Last modified: ${fileStats.modified}');
+      _logger.info('  - File type: ${fileStats.type}');
+
+      // Generate output PDF path
+      _logger.info('Step 2: Generating output path...');
+      final directory = path.dirname(docFilePath);
+      final filename = path.basenameWithoutExtension(docFilePath);
+      final pdfPath = path.join(directory, '$filename.pdf');
+
+      _logger.info('Output path generated:');
+      _logger.info('  - Directory: $directory');
+      _logger.info('  - Filename (no ext): $filename');
+      _logger.info('  - Full PDF path: $pdfPath');
+
+      // Check if PDF already exists
+      _logger.info('Step 3: Checking for existing PDF...');
+      final pdfFile = File(pdfPath);
+      if (await pdfFile.exists()) {
+        final existingStats = await pdfFile.stat();
+        _logger.warning('PDF already exists:');
+        _logger.warning('  - Path: $pdfPath');
+        _logger.warning('  - Size: ${existingStats.size} bytes');
+        _logger.warning('  - Modified: ${existingStats.modified}');
+        _logger.warning('Skipping conversion');
+        return true;
+      }
+      _logger.info('No existing PDF found, proceeding with conversion');
+
+      // Check directory permissions
+      _logger.info('Step 4: Checking directory permissions...');
+      try {
+        final testFile = File(path.join(directory, 'test_write_${DateTime.now().millisecondsSinceEpoch}.tmp'));
+        await testFile.writeAsString('test');
+        await testFile.delete();
+        _logger.info('Directory write permissions: OK');
+      } catch (e) {
+        _logger.severe('Directory write permission check FAILED: $e');
+        return false;
+      }
+
+      // Create PowerShell script for conversion
+      _logger.info('Step 5: Creating PowerShell script...');
+      final powershellScript = _createWordPowerShellScript(docFilePath, pdfPath);
+      _logger.info('PowerShell script created (${powershellScript.length} characters)');
+
+      // Execute PowerShell script
+      _logger.info('Step 6: Executing PowerShell script...');
+      final result = await _executePowerShellScript(powershellScript);
+
+      _logger.info('Step 7: Verifying conversion result...');
+      if (result) {
+        // Verify PDF was created
+        if (await pdfFile.exists()) {
+          final finalStats = await pdfFile.stat();
+          final duration = DateTime.now().difference(startTime);
+
+          _logger.info('=== DOC CONVERSION SUCCESS ===');
+          _logger.info('Input: $docFilePath');
+          _logger.info('Output: $pdfPath');
+          _logger.info('PDF size: ${finalStats.size} bytes');
+          _logger.info('Duration: ${duration.inMilliseconds}ms');
+          _logger.info('========================');
+          return true;
+        } else {
+          _logger.severe('=== DOC CONVERSION FAILED ===');
+          _logger.severe('PowerShell reported success but PDF file not found');
+          _logger.severe('Expected path: $pdfPath');
+          _logger.severe('Directory contents:');
+
+          try {
+            final dir = Directory(directory);
+            final contents = await dir.list().toList();
+            for (final item in contents) {
+              _logger.severe('  - ${item.path}');
+            }
+          } catch (e) {
+            _logger.severe('Could not list directory contents: $e');
+          }
+
+          return false;
+        }
+      } else {
+        final duration = DateTime.now().difference(startTime);
+        _logger.severe('=== DOC CONVERSION FAILED ===');
+        _logger.severe('PowerShell script execution failed');
+        _logger.severe('File: $docFilePath');
+        _logger.severe('Duration: ${duration.inMilliseconds}ms');
+        _logger.severe('========================');
+        return false;
+      }
+
+    } catch (e, stackTrace) {
+      final duration = DateTime.now().difference(startTime);
+      _logger.severe('=== DOC CONVERSION ERROR ===');
+      _logger.severe('Unexpected error during conversion');
+      _logger.severe('File: $docFilePath');
+      _logger.severe('Duration: ${duration.inMilliseconds}ms');
+      _logger.severe('Error: $e');
+      _logger.severe('Stack trace: $stackTrace');
+      _logger.severe('=======================');
       return false;
     }
   }

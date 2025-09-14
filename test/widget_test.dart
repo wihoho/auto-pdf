@@ -192,6 +192,44 @@ void main() {
       expect(FileWatcherService.isPowerPointFile('presentation'), false);
       expect(FileWatcherService.isPowerPointFile('presentation.'), false);
     });
+
+    test('Word file detection works correctly', () {
+      // Test the static file detection method
+
+      // Test supported Word formats
+      expect(FileWatcherService.isWordFile('document.doc'), true);
+      expect(FileWatcherService.isWordFile('document.docx'), true);
+      expect(FileWatcherService.isWordFile('document.docm'), true);
+      expect(FileWatcherService.isWordFile('DOCUMENT.DOC'), true);
+      expect(FileWatcherService.isWordFile('DOCUMENT.DOCX'), true);
+      expect(FileWatcherService.isWordFile('DOCUMENT.DOCM'), true);
+
+      // Test unsupported formats
+      expect(FileWatcherService.isWordFile('presentation.pdf'), false);
+      expect(FileWatcherService.isWordFile('presentation.pptx'), false);
+      expect(FileWatcherService.isWordFile('document.txt'), false);
+      expect(FileWatcherService.isWordFile('document'), false);
+      expect(FileWatcherService.isWordFile('document.'), false);
+    });
+
+    test('Word file detection works correctly', () {
+      // Test the static file detection method
+
+      // Test supported Word formats
+      expect(FileWatcherService.isWordFile('document.doc'), true);
+      expect(FileWatcherService.isWordFile('document.docx'), true);
+      expect(FileWatcherService.isWordFile('document.docm'), true);
+      expect(FileWatcherService.isWordFile('DOCUMENT.DOC'), true);
+      expect(FileWatcherService.isWordFile('DOCUMENT.DOCX'), true);
+      expect(FileWatcherService.isWordFile('DOCUMENT.DOCM'), true);
+
+      // Test unsupported formats
+      expect(FileWatcherService.isWordFile('presentation.pdf'), false);
+      expect(FileWatcherService.isWordFile('presentation.pptx'), false);
+      expect(FileWatcherService.isWordFile('document.txt'), false);
+      expect(FileWatcherService.isWordFile('document'), false);
+      expect(FileWatcherService.isWordFile('document.'), false);
+    });
   });
 
   group('LoggingService Tests', () {

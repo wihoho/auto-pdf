@@ -48,7 +48,7 @@ class _MainScreenState extends State<MainScreen> {
     
     _fileWatcherService.onFileConverted = (filePath) {
       appState.incrementConvertedFiles();
-      appState.addLog('Successfully converted: ${_getFileName(filePath)}');
+      // Success message is already logged by the file watcher service
     };
     
     _fileWatcherService.onConversionError = (error) {
@@ -58,10 +58,6 @@ class _MainScreenState extends State<MainScreen> {
     _fileWatcherService.onLog = (message) {
       appState.addLog(message);
     };
-  }
-
-  String _getFileName(String filePath) {
-    return filePath.split('\\').last.split('/').last;
   }
 
   @override
@@ -161,14 +157,14 @@ class _MainScreenState extends State<MainScreen> {
             ),
             SizedBox(height: 8),
             Text(
-              'Automatically converts PowerPoint files (.ppt, .pptx) to PDF format when they are added to a monitored folder.',
+              'Automatically converts PowerPoint and Word documents to PDF format when they are added to a monitored folder.',
             ),
             SizedBox(height: 16),
             Text(
               'Requirements:',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            Text('• Microsoft PowerPoint installed'),
+            Text('• Microsoft PowerPoint and/or Word installed'),
             Text('• Windows operating system'),
             SizedBox(height: 16),
             Text(
@@ -177,7 +173,7 @@ class _MainScreenState extends State<MainScreen> {
             ),
             Text('1. Select a folder to monitor'),
             Text('2. Click "Start Monitoring"'),
-            Text('3. Add PowerPoint files to the folder'),
+            Text('3. Add PowerPoint (.ppt, .pptx) or Word (.doc, .docx) files to the folder'),
             Text('4. PDFs will be created automatically'),
           ],
         ),
